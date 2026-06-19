@@ -14,8 +14,6 @@
 
 using CreateCipherFN = ICipher* (*)();
 
-// Загружает одну динамическую библиотеку-шифр в рантайме и достаёт из неё
-// объект ICipher через экспортированную функцию createCipher().
 class CipherLoader {
 public:
     explicit CipherLoader(const std::string& path) {
@@ -32,14 +30,12 @@ public:
         cipher_ = fn();
     }
 
-    // Владеем библиотекой и объектом — копирование запрещаем.
-    CipherLoader(const CipherLoader&) = delete;
-    CipherLoader& operator=(const CipherLoader&) = delete;
-
-    ICipher* get() const { return cipher_; }
+    ICipher* get() const {
+        return cipher_;
+    }
 
     ~CipherLoader() {
-        delete cipher_; // объект создан внутри библиотеки — удаляем до выгрузки
+        delete cipher_;
         #ifdef _WIN32
             if (handle_) FreeLibrary(handle_);
         #else
