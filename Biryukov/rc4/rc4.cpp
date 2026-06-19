@@ -1,36 +1,21 @@
 #include "rc4.h"
+#include <stdexcept>
+#include <iostream>
+#include <random>
 #include <cstring>
-#include <cstdlib>
-#include <fstream>
-
-using namespace std;
-
-static const AlgorithmInfo RC4_INFO = {
-    "rc4",
-    16
-};
-
-const AlgorithmInfo* get_algorithm_info() {
-    return &RC4_INFO;
-}
-
-size_t get_output_size(size_t input_size, int operation_type) {
-    (void)operation_type;
-    return input_size;
-}
 
 static uint8_t s_box[256];
 static uint8_t s_i;
 static uint8_t s_j;
 
-static void rc4_ksa(ConstBuffer key) {
-    for (uint64_t idx = 0; idx < 256; idx++) {
+static void rc4_ksa(const uint8_t* key, std::size_t keyLen) {
+    for (std::size_t idx = 0; idx < 256; idx++) {
         s_box[idx] = (uint8_t)idx;
     }
 
     uint8_t j = 0;
-    for (uint64_t idx = 0; idx < 256; idx++) {
-        j = (uint8_t)(j + s_box[idx] + key.data[idx % key.size]);
+    for (std::size_t idx = 0; idx < 256; idx++) {
+        j = (uint8_t)(j + s_box[idx] + key[idx % keyLen]);
         uint8_t tmp = s_box[idx];
         s_box[idx] = s_box[j];
         s_box[j] = tmp;
@@ -52,36 +37,56 @@ static uint8_t rc4_next_byte() {
     return k;
 }
 
-static int rc4_transform(ConstBuffer key, ConstBuffer input, MutBuffer* output) {
-    if (key.size == 0 || key.size > 256) return 1;
-    if (output->size < input.size) return 1;
+static std::vector<uint8_t> rc4_transform(const std::vector<uint8_t>& data, const uint8_t* key, std::size_t keyLen) {
+    rc4_ksa(key, keyLen);
 
-    rc4_ksa(key);
-
-    for (uint64_t idx = 0; idx < input.size; idx++) {
-        output->data[idx] = input.data[idx] ^ rc4_next_byte();
+    std::vector<uint8_t> result(data.size());
+    for (std::size_t idx = 0; idx < data.size(); idx++) {
+        result[idx] = data[idx] ^ rc4_next_byte();
     }
 
     memset(s_box, 0, sizeof(s_box));
     s_i = 0;
     s_j = 0;
 
-    return 0;
+    return result;
 }
 
-int encrypt(ConstBuffer key, ConstBuffer input, MutBuffer* output) {
-    return rc4_transform(key, input, output);
+std::vector<uint8_t> Rc4::encrypt(const std::vector<uint8_t>& data, const std::vector<uint8_t>& key, const std::vector<uint8_t>& nonce) {
+    (void)nonce;
+    try {
+        if (key.size() != 16) {
+            std::cerr << "RC4: неверный размер ключа (нужно 16, получено " << key.size() << ")" << std::endl;
+            return {};
+        }
+        if (data.empty()) {
+            std::cerr << "RC4: пустой вход" << std::endl;
+            return {};
+        }
+        return rc4_transform(data, key.data(), key.size());
+    } catch (const std::exception& e) {
+        std::cerr << "RC4 encrypt: " << e.what() << std::endl;
+        return {};
+    }
 }
 
-int decrypt(ConstBuffer key, ConstBuffer input, MutBuffer* output) {
-    return rc4_transform(key, input, output);
+std::vector<uint8_t> Rc4::decrypt(const std::vector<uint8_t>& data, const std::vector<uint8_t>& key, const std::vector<uint8_t>& nonce) {
+    return encrypt(data, key, nonce);
 }
 
-int generateKey(ConstBuffer key, MutBuffer* output) {
-    (void)key;
-    if (output == nullptr) return 1;
-    ifstream urandom("/dev/urandom", ios::binary);
-    if (!urandom) return 1;
-    urandom.read(reinterpret_cast<char*>(output->data), output->size);
-    return 0;
+std::vector<uint8_t> Rc4::generateKey(std::size_t length) const {
+    try {
+        std::vector<uint8_t> key(length);
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<int> dist(0, 255);
+        for (std::size_t i = 0; i < length; i++)
+            key[i] = dist(gen);
+        return key;
+    } catch (const std::exception& e) {
+        std::cerr << "RC4 generateKey: " << e.what() << std::endl;
+        return {};
+    }
 }
+
+ICipher* createCipher() { return new Rc4(); }
