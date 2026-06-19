@@ -1,8 +1,8 @@
 #include "library.h"
 
-std::string Playfair::encrypt(const std::string& text, const std::string& key) { return ""; }
-std::string Playfair::decrypt(const std::string& text, const std::string& key) { return ""; }
-void Playfair::encryptFile(const std::string& inputPath, const std::string& outputPath, const std::string& key) {}
-void Playfair::decryptFile(const std::string& inputPath, const std::string& outputPath, const std::string& key) {}
+std::vector<std::uint8_t> Playfair::encrypt(const std::vector<std::uint8_t>& data, const std::vector<std::uint8_t>& key, const std::vector<std::uint8_t>& nonce) { return {}; }
+std::vector<std::uint8_t> Playfair::decrypt(const std::vector<std::uint8_t>& data, const std::vector<std::uint8_t>& key, const std::vector<std::uint8_t>& nonce) { return {}; }
+
+std::vector<std::uint8_t> Playfair::generateKey(std::size_t length) const { return {}; }
 
 ICipher* createCipher() { return new Playfair(); }
