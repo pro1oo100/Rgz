@@ -1,5 +1,5 @@
 #pragma once
-#include "../../cipher_interface.h"
+#include "../../icipher.h"
 #include <string>
 #include <vector>
 

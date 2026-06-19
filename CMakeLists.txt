@@ -12,13 +12,16 @@ add_subdirectory(Safonov/xtea)
 add_subdirectory(Komarov/TEA)
 add_subdirectory(Komarov/AffineCipher)
 
+add_subdirectory(Biryukov/atbash)
+add_subdirectory(Biryukov/rc4)
+
 add_executable(app main.cpp)
 target_include_directories(app PRIVATE ${CMAKE_SOURCE_DIR})
 
 target_link_libraries(app ${CMAKE_DL_LIBS})
 
-add_dependencies(app playfair vernam chacha20 xtea TEA AffineCipher)
+add_dependencies(app playfair vernam chacha20 xtea TEA AffineCipher atbash rc4)
 
-set_target_properties(playfair vernam chacha20 xtea TEA AffineCipher PROPERTIES
+set_target_properties(playfair vernam chacha20 xtea TEA AffineCipher atbash rc4 PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Libraries"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Libraries")
