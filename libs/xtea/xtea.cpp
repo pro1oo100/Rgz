@@ -2,6 +2,8 @@
 #include <cstring>
 #include <cstdlib>
 #include <ctime>
+#include <stdexcept>
+#include <iostream>
 
 static const uint32_t DELTA = 0x9E3779B9;
 
@@ -48,52 +50,96 @@ int keySize() { return 16; }
 int nonceSize() { return 0; }
 
 int encrypt(const uint8_t* in, size_t inLen, const uint8_t* key, const uint8_t* nonce, uint8_t* out) {
-    uint32_t k[4];
-    toWords(key, k, 4);
+    try {
+        if (!in || !key || !out) {
+            std::cerr << "XTEA: ошибка — нулевой указатель" << std::endl;
+            return -1;
+        }
+        if (inLen == 0) {
+            std::cerr << "XTEA: ошибка — пустой вход" << std::endl;
+            return -1;
+        }
 
-    int pad = 8 - (inLen % 8);
-    size_t paddedLen = inLen + pad;
+        uint32_t k[4];
+        toWords(key, k, 4);
 
-    uint8_t* padded = new uint8_t[paddedLen];
-    memcpy(padded, in, inLen);
-    memset(padded + inLen, pad, pad);
+        int pad = 8 - (inLen % 8);
+        size_t paddedLen = inLen + pad;
 
-    for (size_t i = 0; i < paddedLen; i += 8) {
-        uint32_t block[2];
-        toWords(padded + i, block, 2);
-        xteaEncryptBlock(block, k);
-        fromWords(block, out + i, 2);
+        uint8_t* padded = new uint8_t[paddedLen];
+        memcpy(padded, in, inLen);
+        memset(padded + inLen, pad, pad);
+
+        for (size_t i = 0; i < paddedLen; i += 8) {
+            uint32_t block[2];
+            toWords(padded + i, block, 2);
+            xteaEncryptBlock(block, k);
+            fromWords(block, out + i, 2);
+        }
+
+        delete[] padded;
+        return paddedLen;
+    } catch (const std::exception& e) {
+        std::cerr << "XTEA encrypt: " << e.what() << std::endl;
+        return -1;
+    } catch (...) {
+        std::cerr << "XTEA encrypt: неизвестная ошибка" << std::endl;
+        return -1;
     }
-
-    delete[] padded;
-    return paddedLen;
 }
 
 int decrypt(const uint8_t* in, size_t inLen, const uint8_t* key, const uint8_t* nonce, uint8_t* out) {
-    uint32_t k[4];
-    toWords(key, k, 4);
+    try {
+        if (!in || !key || !out) {
+            std::cerr << "XTEA: ошибка — нулевой указатель" << std::endl;
+            return -1;
+        }
+        if (inLen == 0) {
+            std::cerr << "XTEA: ошибка — пустой вход" << std::endl;
+            return 0;
+        }
 
-    for (size_t i = 0; i < inLen; i += 8) {
-        uint32_t block[2];
-        toWords(in + i, block, 2);
-        xteaDecryptBlock(block, k);
-        fromWords(block, out + i, 2);
-    }
+        uint32_t k[4];
+        toWords(key, k, 4);
 
-    uint8_t pad = out[inLen - 1];
-    if (pad >= 1 && pad <= 8) {
-        bool ok = true;
-        for (size_t i = inLen - pad; i < inLen; i++)
-            if (out[i] != pad) ok = false;
-        if (ok) return inLen - pad;
+        for (size_t i = 0; i < inLen; i += 8) {
+            uint32_t block[2];
+            toWords(in + i, block, 2);
+            xteaDecryptBlock(block, k);
+            fromWords(block, out + i, 2);
+        }
+
+        uint8_t pad = out[inLen - 1];
+        if (pad >= 1 && pad <= 8) {
+            bool ok = true;
+            for (size_t i = inLen - pad; i < inLen; i++)
+                if (out[i] != pad) ok = false;
+            if (ok) return inLen - pad;
+        }
+        return inLen;
+    } catch (const std::exception& e) {
+        std::cerr << "XTEA decrypt: " << e.what() << std::endl;
+        return -1;
+    } catch (...) {
+        std::cerr << "XTEA decrypt: неизвестная ошибка" << std::endl;
+        return -1;
     }
-    return inLen;
 }
 
 void generateKey(uint8_t* key) {
-    srand(time(0));
-    for (int i = 0; i < 16; i++)
-        key[i] = rand() % 256;
+    try {
+        if (!key) {
+            std::cerr << "XTEA: ошибка — нулевой указатель ключа" << std::endl;
+            return;
+        }
+        srand(time(0));
+        for (int i = 0; i < 16; i++)
+            key[i] = rand() % 256;
+    } catch (const std::exception& e) {
+        std::cerr << "XTEA generateKey: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "XTEA generateKey: неизвестная ошибка" << std::endl;
+    }
 }
 
 }
